@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>daikin-flow-card demo</title>
+<style>
+  /* a few Home Assistant theme variables so the card looks like it does in HA (dark theme) */
+  :root {
+    --primary-text-color: #e1e1e1; --secondary-text-color: #9b9b9b; --primary-color: #03a9f4;
+    --text-primary-color: #fff; --divider-color: #ffffff1f; --card-background-color: #1c1c1c;
+    --secondary-background-color: #282828;
+  }
+  body { margin: 0; padding: 24px; background: #111111; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+  ha-card { display: block; background: var(--card-background-color); border-radius: 12px; color: var(--primary-text-color); }
+  daikin-flow-card { display: block; max-width: 1000px; }
+  .controls { color: #9b9b9b; font-size: 14px; margin-bottom: 12px; }
+  .controls button { margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="controls">
+  Scene:
+  <button data-scene="heat">Heating</button>
+  <button data-scene="dhw">Hot water</button>
+  <button data-scene="idle">Standby</button>
+  <button data-scene="defrost">Defrost</button>
+</div>
+<daikin-flow-card></daikin-flow-card>
+<script>
+  // ha-card is a Home Assistant element; a plain block element is enough for the demo
+  // (styled inline, because it lives inside the card's shadow DOM where page CSS does not reach)
+  customElements.define("ha-card", class extends HTMLElement {
+    connectedCallback() {
+      Object.assign(this.style, { display: "block", background: "var(--card-background-color)",
+        borderRadius: "12px", color: "var(--primary-text-color)" });
+    }
+  });
+</script>
+<script src="../daikin-flow-card.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  if (params.has("shot")) document.querySelector(".controls").style.display = "none";
+  const st = (state, attributes = {}) => ({ state: String(state), attributes });
+
+  const base = {
+    "water_heater.altherma": st("heat_pump", { temperature: 48 }),
+    "climate.altherma_room_temperature": st("heat", { temperature: 20 }),
+    "climate.altherma_leaving_water_offset": st("heat", { temperature: 1 }),
+    "sensor.altherma_climatecontrol_room_temperature": st(19.8),
+    "sensor.altherma_climatecontrol_setpoint_mode": st("weatherDependent"),
+    "sensor.altherma_climatecontrol_control_mode": st("leavingWaterTemperature"),
+    "sensor.altherma_gateway_ratelimit_remaining_day": st(171),
+    "sensor.altherma_climatecontrol_heating_daily_electrical_consumption": st(9),
+    "sensor.altherma_domestichotwatertank_heating_daily_electrical_consumption": st(2),
+    "sensor.altherma_climatecontrol_heating_weekly_electrical_consumption": st(58),
+    "sensor.altherma_domestichotwatertank_heating_weekly_electrical_consumption": st(11),
+    "sensor.altherma_climatecontrol_heating_monthly_electrical_consumption": st(212),
+    "sensor.altherma_domestichotwatertank_heating_monthly_electrical_consumption": st(41),
+    "sensor.altherma_climatecontrol_heating_yearly_electrical_consumption": st(1630),
+    "sensor.altherma_domestichotwatertank_heating_yearly_electrical_consumption": st(540),
+    "sensor.altherma_esp_dhw_tank_temp_r5t": st(46.5),
+    "sensor.altherma_esp_leaving_water_temp_after_buh_r2t": st(34.2),
+    "sensor.altherma_esp_leaving_water_temp_before_buh_r1t": st(34.0),
+    "sensor.altherma_esp_inlet_water_temp_r4t": st(29.6),
+    "sensor.altherma_esp_lw_setpoint_main": st(34),
+    "sensor.altherma_esp_flow_sensor_l_min": st(14.8),
+    "sensor.altherma_esp_outdoor_air_temp_r1t": st(4.5),
+    "sensor.altherma_esp_inv_frequency_rps": st(38),
+    "sensor.altherma_esp_inv_primary_current_a": st(4.1),
+    "sensor.altherma_esp_water_pressure_bar": st(1.8),
+    "sensor.altherma_esp_water_pump_signal_0_max_100_stop": st(42),
+    "sensor.altherma_esp_discharge_pipe_temp": st(61),
+    "sensor.altherma_esp_heat_exchanger_mid_temp": st(2.1),
+    "sensor.altherma_esp_refrig_temp_liquid_side_r3t": st(31),
+    "sensor.altherma_esp_i_u_operation_mode": st("Heating"),
+    "sensor.altherma_esp_error_code": st(0),
+    "binary_sensor.altherma_esp_defrost_operation": st("off"),
+    "binary_sensor.altherma_esp_3way_valve_on_dhw_off_space": st("off"),
+    "binary_sensor.altherma_esp_buh_step1": st("off"),
+    "binary_sensor.altherma_esp_buh_step2": st("off"),
+    "sensor.demo_price": st(0.24),
+    "sensor.demo_solar": st(620),
+    "sensor.demo_grid": st(310),
+    "sensor.demo_heat_pump_power": st(980, { unit_of_measurement: "W" }),
+    "sensor.demo_cop_today": st(4.3),
+  };
+
+  const scenes = {
+    heat: {},
+    dhw: {
+      "binary_sensor.altherma_esp_3way_valve_on_dhw_off_space": st("on"),
+      "sensor.altherma_esp_leaving_water_temp_after_buh_r2t": st(51.5),
+      "sensor.altherma_esp_inlet_water_temp_r4t": st(45.8),
+      "sensor.altherma_esp_inv_frequency_rps": st(64),
+      "sensor.demo_heat_pump_power": st(1650, { unit_of_measurement: "W" }),
+    },
+    idle: {
+      "sensor.altherma_esp_flow_sensor_l_min": st(0),
+      "sensor.altherma_esp_inv_frequency_rps": st(0),
+      "sensor.demo_heat_pump_power": st(12, { unit_of_measurement: "W" }),
+    },
+    defrost: {
+      "binary_sensor.altherma_esp_defrost_operation": st("on"),
+      "sensor.altherma_esp_leaving_water_temp_after_buh_r2t": st(24.1),
+      "sensor.altherma_esp_inlet_water_temp_r4t": st(27.3),
+    },
+  };
+
+  const card = document.querySelector("daikin-flow-card");
+  card.setConfig({
+    language: params.get("lang") || "en",
+    price: "sensor.demo_price",
+    pv: "sensor.demo_solar",
+    grid: "sensor.demo_grid",
+    power_entity: "sensor.demo_heat_pump_power",
+    cop_day: "sensor.demo_cop_today",
+  });
+
+  function show(name) {
+    card.hass = {
+      states: { ...base, ...(scenes[name] || {}) },
+      callService: (domain, service, data) => console.log("callService", domain, service, data),
+    };
+  }
+  document.querySelectorAll("[data-scene]").forEach((b) => b.addEventListener("click", () => show(b.dataset.scene)));
+  show(params.get("scene") || "heat");
+  if (params.has("details")) card.shadowRoot.querySelector('[data-act="details"]').click();
+</script>
+</body>
+</html>
